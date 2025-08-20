@@ -1,3 +1,4 @@
+
 import React, { useLayoutEffect, useEffect, useState, useRef } from "react";
 import assets, { messagesDummyData, userDummyData } from "../assets/assets";
 import { formatMessageTime } from "../library/util";
@@ -9,21 +10,20 @@ const ChatContainer = ({ selectedUser, setSelectedUser, senderProfileImage }) =>
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // Current logged-in user (mock: first from userDummyData)
+  // Current logged-in user (mock)
   const currentUser = userDummyData[0];
 
-  // Scroll when messages update
+  // Scroll to bottom on new message
   useLayoutEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Scroll after image loads
+  // Ensure image-loaded messages also scroll
   useEffect(() => {
     const images = document.querySelectorAll(".chat-message img");
     images.forEach((img) => {
-      img.onload = () => {
+      img.onload = () =>
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      };
     });
   }, [messages]);
 
@@ -55,8 +55,11 @@ const ChatContainer = ({ selectedUser, setSelectedUser, senderProfileImage }) =>
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") handleSendMessage();
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
   };
 
   return selectedUser ? (
@@ -64,8 +67,8 @@ const ChatContainer = ({ selectedUser, setSelectedUser, senderProfileImage }) =>
       {/* Header */}
       <div className="flex items-center gap-3 py-3 mx-4 border-b border-stone-500">
         <img
-          src={selectedUser.profilePic}
-          alt=""
+          src={selectedUser.profilePic || selectedUser.profilepic || assets.avatar_icon}
+          alt="User"
           className="w-8 h-8 rounded-full object-cover"
         />
         <p className="flex-1 text-lg text-white flex items-center gap-2">
@@ -75,10 +78,10 @@ const ChatContainer = ({ selectedUser, setSelectedUser, senderProfileImage }) =>
         <img
           onClick={() => setSelectedUser(null)}
           src={assets.arrow_icon}
-          alt=""
+          alt="Back"
           className="md:hidden max-w-7 cursor-pointer"
         />
-        <img src={assets.help_icon} alt="" className="max-md:hidden max-w-5" />
+        <img src={assets.help_icon} alt="Help" className="max-md:hidden max-w-5" />
       </div>
 
       {/* Chat Area */}
@@ -86,7 +89,7 @@ const ChatContainer = ({ selectedUser, setSelectedUser, senderProfileImage }) =>
         className="flex-1 overflow-y-auto p-4 
         [&::-webkit-scrollbar]:w-2 
         [&::-webkit-scrollbar-track]:bg-gray-800 
-        [&::-webkit-scrollbar-thumb]:bg-violet-500 
+        [&::-webkit-scrollbar-thumb]:bg-violet-500/70 
         [&::-webkit-scrollbar-thumb]:rounded-full"
       >
         {messages
@@ -99,12 +102,10 @@ const ChatContainer = ({ selectedUser, setSelectedUser, senderProfileImage }) =>
           )
           .map((msg) => {
             const isSender = msg.senderId === currentUser._id;
-            const senderUser = userDummyData.find(
-              (u) => u._id === msg.senderId
-            );
+            const senderUser = userDummyData.find((u) => u._id === msg.senderId);
             const profilePic = isSender
               ? senderProfileImage || currentUser.profilePic
-              : senderUser?.profilePic || assets.avatar_icon;
+              : senderUser?.profilePic || senderUser?.profilepic || assets.avatar_icon;
 
             return (
               <div
@@ -127,9 +128,7 @@ const ChatContainer = ({ selectedUser, setSelectedUser, senderProfileImage }) =>
                         src={msg.image}
                         alt="Uploaded"
                         className={`chat-message max-w-[200px] max-h-[200px] rounded-lg border ${
-                          isSender
-                            ? "border-violet-500/30"
-                            : "border-gray-700"
+                          isSender ? "border-violet-500/30" : "border-gray-700"
                         }`}
                       />
                     ) : (
@@ -195,7 +194,7 @@ const ChatContainer = ({ selectedUser, setSelectedUser, senderProfileImage }) =>
                 type="text"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyDown}
                 placeholder="Type a message..."
                 className="w-full bg-transparent p-2 text-sm text-white outline-none px-4"
               />
@@ -204,7 +203,7 @@ const ChatContainer = ({ selectedUser, setSelectedUser, senderProfileImage }) =>
             <button
               onClick={handleSendMessage}
               disabled={!message.trim() && !imagePreview}
-              className="p-2 rounded-full bg-violet-500/30 hover:bg-violet-500/40 disabled:opacity-50 transition-colors"
+              className="p-2 rounded-full bg-violet-500/30 hover:bg-violet-500/50 disabled:opacity-40 transition-all backdrop-blur-md shadow-lg"
             >
               <img src={assets.send_button} alt="Send" className="w-5" />
             </button>
